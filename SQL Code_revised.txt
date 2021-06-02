@@ -1,0 +1,97 @@
+USE Hackathon
+Go
+
+CREATE TABLE fina19 (
+	Fin_ID INT not null,
+	GEOCODE_ID INT not null,
+	ServerCity_ID INT not null,
+	GEOCODE INT not null,
+	MUNICIPALITY VARCHAR(150) not null,
+	Total_Financial_Assets FLOAT,
+	Total_Liabilities FLOAT,
+	Net_Financial_Assets_NetDebt FLOAT,
+	Total_Revenue FLOAT,
+	Total_Expenses FLOAT,
+	Net_Revenue_Expense FLOAT,
+	Return_On_Equity FLOAT,
+	Total_Property_Taxes_GrantsInPlace FLOAT
+)
+GO
+
+BULK INSERT fina19
+FROM 'D:\00Hackathon\DDust\SQL\fina19.csv'
+WITH (
+	FORMAT = 'csv',
+	FIRSTROW = 2,
+	FIELDTERMINATOR = ',',
+	ROWTERMINATOR = '\n'
+)
+GO
+
+CREATE TABLE Mlab (
+	ServerCity_ID INT PRIMARY KEY,
+	Fin_ID INT foreign key references fin19(Fin_ID) not null,
+	ServerCity VARCHAR (55),
+    ServerLat FLOAT,
+    ServerLong FLOAT, 
+    ServerNetworkName VARCHAR (255),
+    ClientCountry VARCHAR (55),
+    ClientCity VARCHAR (55),
+    ClientLat FLOAT,
+    ClientLong FLOAT,
+    RadiusKm INT,
+    ClientNetwork VARCHAR (255),
+    TestThroughputMbpsDownload FLOAT,
+    LossRateDownload FLOAT,
+    MinRoundTripTime FLoat,
+    ClientPostal VARCHAR (10),
+    TestThroughputMbpsUpload FLOAT,
+    TestTimeDownload DATETIMEOFFSET, 
+    TestTimeUpload DATETIMEOFFSET,
+    TimeDiffBtwnDloadAndULoad INT,
+    RowNumberSequence INT,
+    Monthly VARCHAR (10)
+)
+GO
+
+BULK INSERT [dbo].[Mlab]
+FROM 'D:\00Hackathon\DDust\SQL\Mlab.csv'
+WITH (
+FORMAT = 'CSV',
+FIRSTROW = 2,
+FIELDTERMINATOR = ',',
+ROWTERMINATOR = '\n'
+)
+GO
+
+CREATE TABLE pop19 (
+	GEOCODE_ID INT PRIMARY KEY,
+    YEARS INT,
+	STATUS VARCHAR (255),
+    GEOCODE INT,
+    MUNICIPALITY VARCHAR (150),
+    POPULATIONS VARCHAR (255)
+)
+GO
+
+BULK INSERT [dbo].[Mlab]
+FROM 'D:\00Hackathon\DDust\SQL\pop19.csv'
+WITH (
+FORMAT = 'CSV',
+FIRSTROW = 2,
+FIELDTERMINATOR = ',',
+ROWTERMINATOR = '\n'
+)
+GO
+
+SELECT ServerCity,ClientCity,ClientLat,ClientLong,RadiusKm,avg(TestThroughputMbpsDownload) AS Mean_download,avg(TestThroughputMbpsUpload) AS Mean_upload,
+ServerNetworkName,ClientNetwork,fina19.GEOCODE,fina19.MUNICIPALITY,fina19.Net_Revenue_Expense,fina19.Total_Expenses,fina19.Total_Property_Taxes_GrantsInPlace,
+pop19.POPULATIONS
+from Mlab
+
+INNER JOIN fina19 ON Mlab.Fin_ID = fina19.Fin_ID
+INNER JOIN pop19 ON fina19.GEOCODE_ID = pop19.GEOCODE_ID
+
+Group by TestThroughputMbpsDownload, ClientCity,ClientLat,ClientLong,RadiusKm,fina19.GEOCODE,fina19.MUNICIPALITY,fina19.Net_Revenue_Expense,fina19.Total_Expenses,
+fina19.Total_Property_Taxes_GrantsInPlace,pop19.POPULATIONS,TestThroughputMbpsUpload,ServerNetworkName,ClientNetwork,ServerCity
+order by Mean_download
